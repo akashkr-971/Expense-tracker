@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f3d3e">
+<title>Expense Tracker</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="stylesheet" href="styles.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%230f3d3e'/%3E%3Cpath d='M7 12h10M12 7v10' stroke='%23f2a900' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E">
+</head>
+<body>
+<svg class="sprite" aria-hidden="true"><defs>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6"/></symbol>
+<symbol id="i-down" viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 20h16"/></symbol>
+<symbol id="i-up" viewBox="0 0 24 24"><path d="M12 15V3m0 0L8 7m4-4l4 4M4 20h16"/></symbol>
+<symbol id="i-wallet" viewBox="0 0 24 24"><path d="M3 7h16a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2zM3 7l2-3h12v3M16 13.5h2"/></symbol>
+<symbol id="i-cal" viewBox="0 0 24 24"><path d="M4 6h16v14H4zM4 10h16M8 3v4M16 3v4"/></symbol>
+<symbol id="i-month" viewBox="0 0 24 24"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></symbol>
+<symbol id="i-trend" viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"/></symbol>
+<symbol id="i-food" viewBox="0 0 24 24"><path d="M6 3v8a2 2 0 002 2v8M10 3v8a2 2 0 01-2 2M18 3c-2 2-3 5-3 8h3v10"/></symbol>
+<symbol id="i-car" viewBox="0 0 24 24"><path d="M4 16v-4l2-5h12l2 5v4zM6 16v3M18 16v3M4 12h16"/></symbol>
+<symbol id="i-receipt" viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6"/></symbol>
+<symbol id="i-bag" viewBox="0 0 24 24"><path d="M5 8h14l-1 12H6zM9 8V6a3 3 0 016 0v2"/></symbol>
+<symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20s-8-5-8-11a4.5 4.5 0 018-2.5A4.5 4.5 0 0120 9c0 6-8 11-8 11z"/></symbol>
+<symbol id="i-film" viewBox="0 0 24 24"><path d="M4 4h16v16H4zM8 4v16M16 4v16M4 9h4M4 15h4M16 9h4M16 15h4"/></symbol>
+<symbol id="i-tag" viewBox="0 0 24 24"><path d="M3 12V4h8l10 10-8 8zM7.5 8.5h.01"/></symbol>
+</defs></svg>
+<main>
+  <header class="hero">
+    <div class="hero-top"><svg class="i"><use href="#i-wallet"/></svg><span>Spent today</span></div>
+    <b id="today">₹0</b>
+    <div class="hero-sub">This month: <span id="month">₹0</span></div>
+  </header>
+
+  <form class="card" id="f">
+    <h2><svg class="i"><use href="#i-plus"/></svg> New expense</h2>
+    <div class="grid2">
+      <label class="fld"><span>Amount (₹)</span><input id="amt" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00" required></label>
+      <label class="fld"><span>Date</span><input id="dt" type="date" required></label>
+    </div>
+    <label class="fld"><span>Label</span><input id="lab" list="labs" placeholder="Food, Travel, Bills..." maxlength="30"></label>
+    <datalist id="labs"><option>Food</option><option>Travel</option><option>Bills</option><option>Shopping</option><option>Health</option><option>Entertainment</option><option>Other</option></datalist>
+    <button class="btn" type="submit"><svg class="i"><use href="#i-plus"/></svg> Add expense</button>
+  </form>
+
+  <section class="card">
+    <div class="tabs">
+      <button class="tab on" data-m="daily"><svg class="i"><use href="#i-cal"/></svg> Daily</button>
+      <button class="tab" data-m="monthly"><svg class="i"><use href="#i-month"/></svg> Monthly</button>
+    </div>
+    <input id="vd" type="date"><input id="vm" type="month" hidden>
+    <p id="total"></p>
+    <div id="cats"></div>
+    <ul id="list"></ul>
+  </section>
+
+  <section class="card">
+    <h2><svg class="i"><use href="#i-trend"/></svg> <span id="ctitle"></span></h2>
+    <div class="chart"><canvas id="c"></canvas></div>
+  </section>
+
+  <section class="row">
+    <button class="btn ghost" id="ex"><svg class="i"><use href="#i-down"/></svg> Export</button>
+    <label class="btn ghost"><svg class="i"><use href="#i-up"/></svg> Import<input id="im" type="file" accept=".json,application/json" hidden></label>
+  </section>
+</main>
+
+<script>
+const K='expenses_v1',$=id=>document.getElementById(id);
+let data=[],mode='daily',chart;
+try{data=JSON.parse(localStorage.getItem(K))||[]}catch(e){}
+const save=()=>{try{localStorage.setItem(K,JSON.stringify(data))}catch(e){alert('Could not save data in this browser.')}};
+const iso=d=>new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);
+const today=()=>iso(new Date());
+const fmt=n=>'₹'+n.toLocaleString('en-IN',{maximumFractionDigits:2});
+const sum=a=>a.reduce((s,x)=>s+x.amount,0);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
+const icon=l=>{l=l.toLowerCase();return /food|eat|meal|grocer|coffee|tea|snack/.test(l)?'food':/travel|fuel|petrol|bus|auto|cab|train|taxi/.test(l)?'car':/bill|rent|recharge|emi|wifi/.test(l)?'receipt':/shop|cloth/.test(l)?'bag':/health|med|doctor/.test(l)?'heart':/movie|fun|game|entertain/.test(l)?'film':'tag'};
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+
+$('dt').value=$('vd').value=today();
+$('vm').value=today().slice(0,7);
+
+$('f').onsubmit=e=>{
+  e.preventDefault();
+  const a=parseFloat($('amt').value);
+  if(!(a>0))return;
+  data.push({id:uid(),amount:a,label:$('lab').value.trim()||'Other',date:$('dt').value||today()});
+  save();$('amt').value='';$('lab').value='';render();
+};
+
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{
+  mode=b.dataset.m;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t===b));
+  render();
+});
+$('vd').oninput=$('vm').oninput=render;
+
+$('list').onclick=e=>{
+  const id=e.target.closest('button')?.dataset.id;
+  if(id&&confirm('Delete this expense?')){data=data.filter(x=>x.id!==id);save();render();}
+};
+
+function render(){
+  const t=today(),d=mode==='daily';
+  $('today').textContent=fmt(sum(data.filter(x=>x.date===t)));
+  $('month').textContent=fmt(sum(data.filter(x=>x.date.slice(0,7)===t.slice(0,7))));
+  $('vd').hidden=!d;$('vm').hidden=d;
+  const list=d?data.filter(x=>x.date===$('vd').value):data.filter(x=>x.date.slice(0,7)===$('vm').value);
+  $('total').textContent=(d?'Day total: ':'Month total: ')+fmt(sum(list));
+  const c={};list.forEach(x=>c[x.label]=(c[x.label]||0)+x.amount);
+  $('cats').innerHTML=Object.entries(c).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<span class="chip"><svg class="i"><use href="#i-${icon(k)}"/></svg>${esc(k)} ${fmt(v)}</span>`).join('');
+  $('list').innerHTML=list.slice().reverse().sort((a,b)=>b.date.localeCompare(a.date)).map(x=>
+    `<li><span class="ic"><svg class="i"><use href="#i-${icon(x.label)}"/></svg></span><span class="tx"><b>${esc(x.label)}</b><small>${esc(x.date)}</small></span><b class="amt">${fmt(x.amount)}</b><button class="del" data-id="${esc(x.id)}" aria-label="Delete expense"><svg class="i"><use href="#i-trash"/></svg></button></li>`
+  ).join('')||'<li class="mu">No expenses here yet. Add one above.</li>';
+  drawChart(d);
+}
+
+function drawChart(d){
+  $('ctitle').textContent=d?'Daily spending, last 30 days':'Monthly spending, last 12 months';
+  if(!window.Chart)return;
+  const L=[],V=[],now=new Date();
+  if(d){
+    for(let i=29;i>=0;i--){const t=new Date(now);t.setDate(t.getDate()-i);const k=iso(t);
+      L.push(t.getDate()+'/'+(t.getMonth()+1));V.push(sum(data.filter(x=>x.date===k)));}
+  }else{
+    for(let i=11;i>=0;i--){const t=new Date(now.getFullYear(),now.getMonth()-i,1);const k=iso(t).slice(0,7);
+      L.push(t.toLocaleString('en',{month:'short'}));V.push(sum(data.filter(x=>x.date.slice(0,7)===k)));}
+  }
+  if(chart)chart.destroy();
+  chart=new Chart($('c'),{
+    type:d?'line':'bar',
+    data:{labels:L,datasets:[{data:V,borderColor:'#f2a900',backgroundColor:d?'rgba(242,169,0,.2)':'#f2a900',fill:d,tension:.3,pointRadius:d?2:0,borderRadius:4}]},
+    options:{maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true},x:{ticks:{maxTicksLimit:8}}}}
+  });
+}
+
+$('ex').onclick=()=>{
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,1)],{type:'application/json'}));
+  a.download='expenses-'+today()+'.json';a.click();
+};
+$('im').onchange=async e=>{
+  try{
+    const j=JSON.parse(await e.target.files[0].text());
+    if(!Array.isArray(j))throw 0;
+    const ids=new Set(data.map(x=>x.id));
+    j.filter(x=>x&&x.amount>0&&x.date&&!ids.has(x.id)).forEach(x=>data.push({id:x.id||uid(),amount:+x.amount,label:String(x.label||'Other'),date:String(x.date)}));
+    save();render();
+  }catch(_){alert('That file is not a valid backup.');}
+  e.target.value='';
+};
+
+render();
+</script>
+</body>
+</html>
