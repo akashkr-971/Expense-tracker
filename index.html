@@ -26,6 +26,7 @@
 <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20s-8-5-8-11a4.5 4.5 0 018-2.5A4.5 4.5 0 0120 9c0 6-8 11-8 11z"/></symbol>
 <symbol id="i-film" viewBox="0 0 24 24"><path d="M4 4h16v16H4zM8 4v16M16 4v16M4 9h4M4 15h4M16 9h4M16 15h4"/></symbol>
 <symbol id="i-tag" viewBox="0 0 24 24"><path d="M3 12V4h8l10 10-8 8zM7.5 8.5h.01"/></symbol>
+<symbol id="i-cup" viewBox="0 0 24 24"><path d="M4 8h13v6a5 5 0 01-5 5H9a5 5 0 01-5-5zM17 10h2a2 2 0 010 4h-2M7 3v2M11 3v2"/></symbol>
 </defs></svg>
 <main>
   <header class="hero">
@@ -40,8 +41,11 @@
       <label class="fld"><span>Amount (₹)</span><input id="amt" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00" required></label>
       <label class="fld"><span>Date</span><input id="dt" type="date" required></label>
     </div>
-    <label class="fld"><span>Label</span><input id="lab" list="labs" placeholder="Food, Travel, Bills..." maxlength="30"></label>
-    <datalist id="labs"><option>Food</option><option>Travel</option><option>Bills</option><option>Shopping</option><option>Health</option><option>Entertainment</option><option>Other</option></datalist>
+    <div class="fld" role="radiogroup" aria-label="Label">
+      <span>Label</span>
+      <div class="radios"><label><input type="radio" name="lab" value="Breakfast" checked><span><svg class="i"><use href="#i-food"/></svg> Breakfast</span></label><label><input type="radio" name="lab" value="Lunch"><span><svg class="i"><use href="#i-food"/></svg> Lunch</span></label><label><input type="radio" name="lab" value="Dinner"><span><svg class="i"><use href="#i-food"/></svg> Dinner</span></label><label><input type="radio" name="lab" value="Tea"><span><svg class="i"><use href="#i-cup"/></svg> Tea</span></label><label><input type="radio" name="lab" value="Travel"><span><svg class="i"><use href="#i-car"/></svg> Travel</span></label><label><input type="radio" name="lab" value="Others"><span><svg class="i"><use href="#i-tag"/></svg> Others</span></label></div>
+      <input id="other" placeholder="Enter label (e.g. Snacks)" maxlength="30" hidden>
+    </div>
     <button class="btn" type="submit"><svg class="i"><use href="#i-plus"/></svg> Add expense</button>
   </form>
 
@@ -77,18 +81,20 @@ const today=()=>iso(new Date());
 const fmt=n=>'₹'+n.toLocaleString('en-IN',{maximumFractionDigits:2});
 const sum=a=>a.reduce((s,x)=>s+x.amount,0);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
-const icon=l=>{l=l.toLowerCase();return /food|eat|meal|grocer|coffee|tea|snack/.test(l)?'food':/travel|fuel|petrol|bus|auto|cab|train|taxi/.test(l)?'car':/bill|rent|recharge|emi|wifi/.test(l)?'receipt':/shop|cloth/.test(l)?'bag':/health|med|doctor/.test(l)?'heart':/movie|fun|game|entertain/.test(l)?'film':'tag'};
+const icon=l=>{l=l.toLowerCase();return /\btea\b|coffee|chai/.test(l)?'cup':/food|eat|meal|grocer|snack|breakfast|lunch|dinner/.test(l)?'food':/travel|fuel|petrol|bus|auto|cab|train|taxi/.test(l)?'car':/bill|rent|recharge|emi|wifi/.test(l)?'receipt':/shop|cloth/.test(l)?'bag':/health|med|doctor/.test(l)?'heart':/movie|fun|game|entertain/.test(l)?'film':'tag'};
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 
 $('dt').value=$('vd').value=today();
 $('vm').value=today().slice(0,7);
 
+const getLabel=()=>{const v=document.querySelector('input[name=lab]:checked').value;return v==='Others'?($('other').value.trim()||'Others'):v};
+document.querySelectorAll('input[name=lab]').forEach(r=>r.onchange=()=>{const o=getLabel&&document.querySelector('input[name=lab]:checked').value==='Others';$('other').hidden=!o;if(o)$('other').focus()});
 $('f').onsubmit=e=>{
   e.preventDefault();
   const a=parseFloat($('amt').value);
   if(!(a>0))return;
-  data.push({id:uid(),amount:a,label:$('lab').value.trim()||'Other',date:$('dt').value||today()});
-  save();$('amt').value='';$('lab').value='';render();
+  data.push({id:uid(),amount:a,label:getLabel(),date:$('dt').value||today()});
+  save();$('amt').value='';$('other').value='';render();
 };
 
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{
@@ -152,6 +158,11 @@ $('im').onchange=async e=>{
   }catch(_){alert('That file is not a valid backup.');}
   e.target.value='';
 };
+
+// pick meal label from the time of day (6-11 Breakfast, 11-15 Lunch, 15-19 Tea, else Dinner)
+{const hr=new Date().getHours();
+ const m=hr>=6&&hr<11?'Breakfast':hr>=11&&hr<15?'Lunch':hr>=15&&hr<19?'Tea':'Dinner';
+ document.querySelector('input[name=lab][value='+m+']').checked=true;}
 
 render();
 </script>

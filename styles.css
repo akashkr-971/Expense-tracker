@@ -58,3 +58,12 @@ li.mu{color:var(--mu);justify-content:center;padding:18px 0}
 
 @media(min-width:600px){.hero b{font-size:3.2rem}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}.btn:active{transform:none}}
+
+/* label radios */
+.radios{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.radios label{position:relative}
+.radios input{position:absolute;inset:0;width:100%;height:100%;min-height:0;opacity:0;margin:0;cursor:pointer}
+.radios span{display:flex;align-items:center;justify-content:center;gap:6px;min-height:46px;padding:0 6px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);color:var(--tx);font-size:.92rem}
+.radios input:checked+span{background:var(--ac);border-color:var(--ac);color:#fff}
+.radios input:focus-visible+span{outline:2px solid var(--hi);outline-offset:2px}
+#other{margin-top:8px}
