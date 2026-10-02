@@ -27,12 +27,13 @@
 <symbol id="i-film" viewBox="0 0 24 24"><path d="M4 4h16v16H4zM8 4v16M16 4v16M4 9h4M4 15h4M16 9h4M16 15h4"/></symbol>
 <symbol id="i-tag" viewBox="0 0 24 24"><path d="M3 12V4h8l10 10-8 8zM7.5 8.5h.01"/></symbol>
 <symbol id="i-cup" viewBox="0 0 24 24"><path d="M4 8h13v6a5 5 0 01-5 5H9a5 5 0 01-5-5zM17 10h2a2 2 0 010 4h-2M7 3v2M11 3v2"/></symbol>
+<symbol id="i-week" viewBox="0 0 24 24"><path d="M4 6h16v14H4zM4 10h16M8 14h8M8 17h5"/></symbol>
 </defs></svg>
 <main>
   <header class="hero">
     <div class="hero-top"><svg class="i"><use href="#i-wallet"/></svg><span>Spent today</span></div>
     <b id="today">₹0</b>
-    <div class="hero-sub">This month: <span id="month">₹0</span></div>
+    <div class="hero-sub"><div>This week: <span id="week">₹0</span></div><div>This month: <span id="month">₹0</span></div></div>
   </header>
 
   <form class="card" id="f">
@@ -52,6 +53,7 @@
   <section class="card">
     <div class="tabs">
       <button class="tab on" data-m="daily"><svg class="i"><use href="#i-cal"/></svg> Daily</button>
+      <button class="tab" data-m="weekly"><svg class="i"><use href="#i-week"/></svg> Weekly</button>
       <button class="tab" data-m="monthly"><svg class="i"><use href="#i-month"/></svg> Monthly</button>
     </div>
     <input id="vd" type="date"><input id="vm" type="month" hidden>
@@ -82,6 +84,8 @@ const fmt=n=>'₹'+n.toLocaleString('en-IN',{maximumFractionDigits:2});
 const sum=a=>a.reduce((s,x)=>s+x.amount,0);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
 const icon=l=>{l=l.toLowerCase();return /\btea\b|coffee|chai/.test(l)?'cup':/food|eat|meal|grocer|snack|breakfast|lunch|dinner/.test(l)?'food':/travel|fuel|petrol|bus|auto|cab|train|taxi/.test(l)?'car':/bill|rent|recharge|emi|wifi/.test(l)?'receipt':/shop|cloth/.test(l)?'bag':/health|med|doctor/.test(l)?'heart':/movie|fun|game|entertain/.test(l)?'film':'tag'};
+const weekOf=s=>{const[y,mo,da]=s.split('-').map(Number),wd=(new Date(y,mo-1,da).getDay()+6)%7;return[iso(new Date(y,mo-1,da-wd)),iso(new Date(y,mo-1,da-wd+6))]};
+const sh=s=>new Date(s+'T00:00').toLocaleDateString('en-IN',{day:'numeric',month:'short'});
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 
 $('dt').value=$('vd').value=today();
@@ -113,22 +117,29 @@ function render(){
   const t=today(),d=mode==='daily';
   $('today').textContent=fmt(sum(data.filter(x=>x.date===t)));
   $('month').textContent=fmt(sum(data.filter(x=>x.date.slice(0,7)===t.slice(0,7))));
-  $('vd').hidden=!d;$('vm').hidden=d;
-  const list=d?data.filter(x=>x.date===$('vd').value):data.filter(x=>x.date.slice(0,7)===$('vm').value);
-  $('total').textContent=(d?'Day total: ':'Month total: ')+fmt(sum(list));
+  const n=new Date(),wd=(n.getDay()+6)%7,ws=iso(new Date(n.getFullYear(),n.getMonth(),n.getDate()-wd)),we=iso(new Date(n.getFullYear(),n.getMonth(),n.getDate()-wd+6));
+  $('week').textContent=fmt(sum(data.filter(x=>x.date>=ws&&x.date<=we)));
+  const w=mode==='weekly';$('vd').hidden=mode==='monthly';$('vm').hidden=mode!=='monthly';
+  const[wa,wb]=weekOf($('vd').value||t);
+  const list=d?data.filter(x=>x.date===$('vd').value):w?data.filter(x=>x.date>=wa&&x.date<=wb):data.filter(x=>x.date.slice(0,7)===$('vm').value);
+  $('total').textContent=(d?'Day total: ':w?'Week '+sh(wa)+' - '+sh(wb)+': ':'Month total: ')+fmt(sum(list));
   const c={};list.forEach(x=>c[x.label]=(c[x.label]||0)+x.amount);
   $('cats').innerHTML=Object.entries(c).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<span class="chip"><svg class="i"><use href="#i-${icon(k)}"/></svg>${esc(k)} ${fmt(v)}</span>`).join('');
   $('list').innerHTML=list.slice().reverse().sort((a,b)=>b.date.localeCompare(a.date)).map(x=>
     `<li><span class="ic"><svg class="i"><use href="#i-${icon(x.label)}"/></svg></span><span class="tx"><b>${esc(x.label)}</b><small>${esc(x.date)}</small></span><b class="amt">${fmt(x.amount)}</b><button class="del" data-id="${esc(x.id)}" aria-label="Delete expense"><svg class="i"><use href="#i-trash"/></svg></button></li>`
   ).join('')||'<li class="mu">No expenses here yet. Add one above.</li>';
-  drawChart(d);
+  drawChart(d,w);
 }
 
-function drawChart(d){
-  $('ctitle').textContent=d?'Daily spending, last 30 days':'Monthly spending, last 12 months';
+function drawChart(d,w){
+  $('ctitle').textContent=d?'Daily spending, last 30 days':w?'Weekly spending, last 12 weeks':'Monthly spending, last 12 months';
   if(!window.Chart)return;
   const L=[],V=[],now=new Date();
-  if(d){
+  if(w){
+    const base=new Date(weekOf(today())[0]+'T00:00');
+    for(let i=11;i>=0;i--){const s=new Date(base);s.setDate(s.getDate()-7*i);const e=new Date(s);e.setDate(e.getDate()+6);const a=iso(s),b=iso(e);
+      L.push(s.getDate()+'/'+(s.getMonth()+1));V.push(sum(data.filter(x=>x.date>=a&&x.date<=b)));}
+  }else if(d){
     for(let i=29;i>=0;i--){const t=new Date(now);t.setDate(t.getDate()-i);const k=iso(t);
       L.push(t.getDate()+'/'+(t.getMonth()+1));V.push(sum(data.filter(x=>x.date===k)));}
   }else{
