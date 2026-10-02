@@ -122,12 +122,13 @@ function render(){
   const w=mode==='weekly';$('vd').hidden=mode==='monthly';$('vm').hidden=mode!=='monthly';
   const[wa,wb]=weekOf($('vd').value||t);
   const list=d?data.filter(x=>x.date===$('vd').value):w?data.filter(x=>x.date>=wa&&x.date<=wb):data.filter(x=>x.date.slice(0,7)===$('vm').value);
-  $('total').textContent=(d?'Day total: ':w?'Week '+sh(wa)+' - '+sh(wb)+': ':'Month total: ')+fmt(sum(list));
+  $('total').textContent=(d?'Day total: ':w?'Week '+sh(wa)+' - '+sh(wb)+': ':'Month total: ')+fmt(sum(list))+' \u00b7 '+list.length+(list.length===1?' entry':' entries');
   const c={};list.forEach(x=>c[x.label]=(c[x.label]||0)+x.amount);
   $('cats').innerHTML=Object.entries(c).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<span class="chip"><svg class="i"><use href="#i-${icon(k)}"/></svg>${esc(k)} ${fmt(v)}</span>`).join('');
   $('list').innerHTML=list.slice().reverse().sort((a,b)=>b.date.localeCompare(a.date)).map(x=>
     `<li><span class="ic"><svg class="i"><use href="#i-${icon(x.label)}"/></svg></span><span class="tx"><b>${esc(x.label)}</b><small>${esc(x.date)}</small></span><b class="amt">${fmt(x.amount)}</b><button class="del" data-id="${esc(x.id)}" aria-label="Delete expense"><svg class="i"><use href="#i-trash"/></svg></button></li>`
   ).join('')||'<li class="mu">No expenses here yet. Add one above.</li>';
+  {const key=mode+$('vd').value+$('vm').value;if(key!==window._lk){$('list').scrollTop=0;window._lk=key}}
   drawChart(d,w);
 }
 
