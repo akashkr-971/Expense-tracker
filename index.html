@@ -63,6 +63,14 @@
   </section>
 
   <section class="card">
+    <h2><svg class="i"><use href="#i-month"/></svg> Month summary</h2>
+    <input id="sm" type="month">
+    <p id="stotal"></p>
+    <div id="gcards" class="gcards"></div>
+    <ul id="slist"></ul>
+  </section>
+
+  <section class="card">
     <h2><svg class="i"><use href="#i-trend"/></svg> <span id="ctitle"></span></h2>
     <div class="chart"><canvas id="c"></canvas></div>
   </section>
@@ -86,10 +94,14 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
 const icon=l=>{l=l.toLowerCase();return /\btea\b|coffee|chai/.test(l)?'cup':/food|eat|meal|grocer|snack|breakfast|lunch|dinner/.test(l)?'food':/travel|fuel|petrol|bus|auto|cab|train|taxi/.test(l)?'car':/bill|rent|recharge|emi|wifi/.test(l)?'receipt':/shop|cloth/.test(l)?'bag':/health|med|doctor/.test(l)?'heart':/movie|fun|game|entertain/.test(l)?'film':'tag'};
 const weekOf=s=>{const[y,mo,da]=s.split('-').map(Number),wd=(new Date(y,mo-1,da).getDay()+6)%7;return[iso(new Date(y,mo-1,da-wd)),iso(new Date(y,mo-1,da-wd+6))]};
 const sh=s=>new Date(s+'T00:00').toLocaleDateString('en-IN',{day:'numeric',month:'short'});
+// Groups for the month summary. Edit the words here to change what lands where.
+const GROUPS=[['Food',/breakfast|lunch|dinner|\btea\b|\bfood\b/],['Groceries',/groc/],['Travel',/travel|\bfuel\b|\bpetrol\b/]];
+const grp=l=>{l=String(l).toLowerCase();for(const[g,r]of GROUPS)if(r.test(l))return g;return'General'};
+let sel='All';
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 
 $('dt').value=$('vd').value=today();
-$('vm').value=today().slice(0,7);
+$('vm').value=$('sm').value=today().slice(0,7);
 
 const getLabel=()=>{const v=document.querySelector('input[name=lab]:checked').value;return v==='Others'?($('other').value.trim()||'Others'):v};
 document.querySelectorAll('input[name=lab]').forEach(r=>r.onchange=()=>{const o=getLabel&&document.querySelector('input[name=lab]:checked').value==='Others';$('other').hidden=!o;if(o)$('other').focus()});
@@ -130,6 +142,7 @@ function render(){
   ).join('')||'<li class="mu">No expenses here yet. Add one above.</li>';
   {const key=mode+$('vd').value+$('vm').value;if(key!==window._lk){$('list').scrollTop=0;window._lk=key}}
   drawChart(d,w);
+  renderSummary();
 }
 
 function drawChart(d,w){
@@ -154,6 +167,21 @@ function drawChart(d,w){
     options:{maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true},x:{ticks:{maxTicksLimit:8}}}}
   });
 }
+
+function renderSummary(){
+  const mth=$('sm').value||today().slice(0,7);
+  const L=data.filter(x=>x.date.slice(0,7)===mth),tot=sum(L),G={Food:0,Groceries:0,Travel:0,General:0};
+  L.forEach(x=>G[grp(x.label)]+=x.amount);
+  $('stotal').textContent='Month total: '+fmt(tot)+' \u00b7 '+L.length+(L.length===1?' entry':' entries');
+  $('gcards').innerHTML=[['All',tot],...Object.entries(G)].map(([k,v])=>{const p=tot?Math.round(v/tot*100):0;
+    return `<button class="g${k===sel?' on':''}" data-g="${k}"><span>${k}</span><b>${fmt(v)}</b><small>${p}%</small><i style="width:${p}%"></i></button>`}).join('');
+  const F=sel==='All'?L:L.filter(x=>grp(x.label)===sel);
+  $('slist').innerHTML=F.slice().reverse().sort((a,b)=>b.date.localeCompare(a.date)).map(x=>
+    `<li><span class="ic"><svg class="i"><use href="#i-${icon(x.label)}"/></svg></span><span class="tx"><b>${esc(x.label)}</b><small>${esc(x.date)}</small></span><b class="amt">${fmt(x.amount)}</b></li>`
+  ).join('')||'<li class="mu">No expenses in this group.</li>';
+}
+$('sm').oninput=()=>{$('slist').scrollTop=0;renderSummary()};
+$('gcards').onclick=e=>{const b=e.target.closest('button');if(b){sel=b.dataset.g;$('slist').scrollTop=0;renderSummary()}};
 
 $('ex').onclick=()=>{
   const a=document.createElement('a');
